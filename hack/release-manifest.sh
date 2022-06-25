@@ -51,4 +51,4 @@ for target in "${TARGETS[@]}"; do
   append_target "$target"
 done
 
-sed -i '' "s/changjjjjjjjj\/raffle-user-service:latest/$REGISTRY\/raffle-user-service:$VERSION/g" "$RELEASE_MANIFEST"
+sed -i '' "s/changjjjjjjjj\/sellfie-user-service:latest/$REGISTRY\/sellfie-user-service:$VERSION/g" "$RELEASE_MANIFEST"
