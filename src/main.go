@@ -1,34 +1,41 @@
 package main
 
 import (
-	"context"
-	"github.com/sellfie/usermanagerservice/src/pb"
-	"google.golang.org/grpc"
+	"fmt"
+	"github.com/sellfie/usermanagerservice/src/logrotate"
+	"github.com/sellfie/usermanagerservice/src/server"
+	"io"
+	"os"
+	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/log/zap"
+)
+
+var (
+	setupLog = ctrl.Log.WithName("setup")
+	port     = "3550"
 )
 
 func main() {
-	grpcServer := grpc.NewServer()
-	pb.RegisterUserServiceServer(grpcServer, &userServiceServer{})
-}
+	// Set log rotation
+	logFile, err := logrotate.LogFile()
+	if err != nil {
+		fmt.Println(err.Error())
+		os.Exit(1)
+	}
+	defer func() {
+		_ = logFile.Close()
+	}()
+	logWriter := io.MultiWriter(logFile, os.Stdout)
+	ctrl.SetLogger(zap.New(zap.UseDevMode(true), zap.WriteTo(logWriter)))
+	if err := logrotate.StartRotate("0 0 1 * * ?"); err != nil {
+		setupLog.Error(err, "")
+		os.Exit(1)
+	}
+	// Set ports
+	if os.Getenv("PORT") != "" {
+		port = os.Getenv("PORT")
+	}
 
-type userServiceServer struct{}
-
-func (u userServiceServer) CreateUser(ctx context.Context, request *pb.CreateUserRequest) (*pb.Error, error) {
-	//TODO implement me
-	panic("implement me")
-}
-
-func (u userServiceServer) GetUser(ctx context.Context, request *pb.GetUserRequest) (*pb.GetUserResponse, error) {
-	//TODO implement me
-	panic("implement me")
-}
-
-func (u userServiceServer) DeleteUser(ctx context.Context, request *pb.DeleteUserRequest) (*pb.Error, error) {
-	//TODO implement me
-	panic("implement me")
-}
-
-func (u userServiceServer) LoginUser(ctx context.Context, request *pb.LoginUserRequest) (*pb.Error, error) {
-	//TODO implement me
-	panic("implement me")
+	srv := server.New()
+	srv.Start(port)
 }
